@@ -90,6 +90,14 @@ python main.py index
 python main.py ask "你的问题"
 ```
 
+也可以用网页界面提问：
+
+```bash
+python app.py
+```
+
+启动后打开 `http://127.0.0.1:7860`，输入问题就能看到回答和引用来源。
+
 ## 目录结构
 
 ```
@@ -102,6 +110,7 @@ reranker.py   重排序模型，把问题和段落拼在一起判断相关度
 evaluate_search.py  检索评测，算 Recall@K 和 MRR
 generator.py  拼提示词，调用 DeepSeek 生成答案
 main.py       命令行入口
+app.py        网页界面，用 Gradio 做的
 docs/         放要检索的文档
 index/        生成的索引，不进仓库
 ```
