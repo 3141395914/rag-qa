@@ -11,11 +11,32 @@ from config import CHUNK_OVERLAP, CHUNK_SIZE
 
 
 def split_text(text, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
-    """按字符切块，切点尽量落在句号或换行处。"""
+    """切块。
+
+    如果文档用 --- 分隔成一条条记录（比如岗位清单），每条单独成块，
+    避免把不同岗位混在同一块里，检索出来的引用才准。
+    """
     text = text.strip()
     if not text:
         return []
 
+    if "\n---\n" in text:
+        chunks = []
+        for block in text.split("\n---\n"):
+            block = block.strip()
+            if not block:
+                continue
+            if len(block) <= chunk_size:
+                chunks.append(block)
+            else:
+                chunks.extend(_split_long(block, chunk_size, overlap))
+        return chunks
+
+    return _split_long(text, chunk_size, overlap)
+
+
+def _split_long(text, chunk_size, overlap):
+    """长文本按字符切，切点尽量落在句号或换行处。"""
     chunks = []
     start = 0
 

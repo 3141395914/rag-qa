@@ -46,7 +46,7 @@ def main():
             print("请把问题写在命令后面")
             return
 
-        hits = search(question)
+        hits = search(question, rerank=True)
         print("检索到的资料：")
         for i, (score, text, source) in enumerate(hits):
             print(f"  [{i + 1}] 相似度 {score:.3f}  {source}")

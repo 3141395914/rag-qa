@@ -1,5 +1,6 @@
 """建索引和检索。"""
 
+import hashlib
 import json
 import os
 
@@ -14,25 +15,69 @@ from embedder import encode, encode_query
 _bm25 = None
 
 
+def _file_hash(text):
+    """文件内容的指纹，内容变一个字符它就会变。"""
+    return hashlib.md5(text.encode("utf-8")).hexdigest()
+
+
+def _load_old():
+    """读旧索引和元数据，没有就返回空。"""
+    try:
+        vectors = np.load(os.path.join(INDEX_DIR, "vectors.npy"))
+        with open(os.path.join(INDEX_DIR, "chunks.json"), encoding="utf-8") as f:
+            data = json.load(f)
+        with open(os.path.join(INDEX_DIR, "meta.json"), encoding="utf-8") as f:
+            meta = json.load(f)
+        return vectors, data["chunks"], data["sources"], meta
+    except (FileNotFoundError, ValueError, KeyError):
+        return None, [], [], {}
+
+
 def build_index(docs):
-    """docs 是 [(文件名, 文本)]，切块、向量化、保存到磁盘。"""
+    """docs 是 [(文件名, 文本)]，切块、向量化、保存到磁盘。
+
+    增量逻辑：文件哈希没变就复用旧向量，只编码新增或修改过的文件。
+    第一次运行没有元数据，会全量编码；之后就只有变化的文件会重算。
+    """
+    global _bm25
+
+    old_vectors, old_chunks, old_sources, old_meta = _load_old()
+
     chunks = []
     sources = []
+    vectors = []
+    meta = {}
 
     for name, text in docs:
-        for piece in split_text(text):
-            chunks.append(piece)
-            sources.append(name)
+        digest = _file_hash(text)
+        meta[name] = digest
+
+        if old_meta.get(name) == digest:
+            indexes = [i for i, source in enumerate(old_sources) if source == name]
+            if indexes:
+                for i in indexes:
+                    chunks.append(old_chunks[i])
+                    sources.append(name)
+                    vectors.append(old_vectors[i])
+                print(f"  {name}：内容没变，复用 {len(indexes)} 块")
+                continue
+
+        pieces = split_text(text)
+        if not pieces:
+            continue
+        new_vectors = encode(pieces)
+        chunks.extend(pieces)
+        sources.extend([name] * len(pieces))
+        vectors.extend(new_vectors)
+        print(f"  {name}：重新编码 {len(pieces)} 块")
 
     if not chunks:
-        print("文档是空的，没有可建索引的内容")
+        print("没有可建索引的内容")
         return
 
-    print(f"共切成 {len(chunks)} 块，开始向量化...")
-    vectors = encode(chunks)
-
+    matrix = np.vstack(vectors)
     os.makedirs(INDEX_DIR, exist_ok=True)
-    np.save(os.path.join(INDEX_DIR, "vectors.npy"), vectors)
+    np.save(os.path.join(INDEX_DIR, "vectors.npy"), matrix)
     with open(os.path.join(INDEX_DIR, "chunks.json"), "w", encoding="utf-8") as f:
         json.dump(
             {"chunks": chunks, "sources": sources},
@@ -40,8 +85,12 @@ def build_index(docs):
             ensure_ascii=False,
             indent=2,
         )
+    with open(os.path.join(INDEX_DIR, "meta.json"), "w", encoding="utf-8") as f:
+        json.dump(meta, f, ensure_ascii=False, indent=2)
 
-    print(f"索引已保存：{len(chunks)} 块，向量维度 {vectors.shape[1]}")
+    # 索引变了，关键词检索的统计也要跟着重建
+    _bm25 = None
+    print(f"索引已保存：{len(chunks)} 块，向量维度 {matrix.shape[1]}")
 
 
 def load_index():
