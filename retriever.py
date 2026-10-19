@@ -5,9 +5,13 @@ import os
 
 import numpy as np
 
+from bm25 import BM25
 from chunker import split_text
 from config import INDEX_DIR, TOP_K
 from embedder import encode, encode_query
+
+# BM25 的统计只跟文档块有关，加载一次之后复用
+_bm25 = None
 
 
 def build_index(docs):
@@ -47,13 +51,37 @@ def load_index():
     return vectors, data["chunks"], data["sources"]
 
 
+def rrf_merge(*rank_lists, k=60):
+    """倒数排名融合（Reciprocal Rank Fusion）。
+
+    两路检索的分数不在一个量纲上，直接相加不公平。RRF 不看分数只看排名：
+    某个块在某一路排第 r 名，就给它 1/(k+r) 分，两路加起来。
+    k 取 60 是常见经验值，作用是让排名靠前的差距别太夸张。
+    """
+    combined = {}
+    for scores in rank_lists:
+        order = np.argsort(scores)[::-1]
+        for rank, index in enumerate(order, start=1):
+            combined[int(index)] = combined.get(int(index), 0.0) + 1.0 / (k + rank)
+    return combined
+
+
 def search(question, top_k=TOP_K):
-    """检索最相关的几块，返回 [(相似度, 文本, 来源), ...]。"""
+    """混合检索：向量路 + 关键词路，按排名融合后取前几块。"""
+    global _bm25
+
     vectors, chunks, sources = load_index()
+    if _bm25 is None:
+        _bm25 = BM25(chunks)
+
+    # 第一路：语义相似度
     query_vec = encode_query(question)
+    vector_scores = vectors @ query_vec
 
-    # 两边都是单位向量，点积就等于余弦相似度
-    scores = vectors @ query_vec
-    order = np.argsort(scores)[::-1][:top_k]
+    # 第二路：关键词打分
+    keyword_scores = np.array(_bm25.scores(question))
 
-    return [(float(scores[i]), chunks[i], sources[i]) for i in order]
+    combined = rrf_merge(vector_scores, keyword_scores)
+    order = sorted(combined, key=combined.get, reverse=True)[:top_k]
+
+    return [(float(combined[i]), chunks[i], sources[i]) for i in order]
