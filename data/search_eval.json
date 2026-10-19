@@ -1,0 +1,30 @@
+[
+  {
+    "question": "这个项目要抽取哪些字段？",
+    "answer_key": "项目目标"
+  },
+  {
+    "question": "抓取网页的具体步骤是什么？",
+    "answer_key": "第一步抓取"
+  },
+  {
+    "question": "字段校验的具体做法是什么？",
+    "answer_key": "核对办法"
+  },
+  {
+    "question": "接口失败时程序怎么处理？",
+    "answer_key": "接口层"
+  },
+  {
+    "question": "缓存文件的文件名是怎么来的？",
+    "answer_key": "MD5"
+  },
+  {
+    "question": "评测时多抽出来的岗位是什么原因？",
+    "answer_key": "多抽出来的"
+  },
+  {
+    "question": "为什么有些站点要单独写适配器？",
+    "answer_key": "单独写适配器"
+  }
+]
