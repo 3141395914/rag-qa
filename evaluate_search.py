@@ -16,6 +16,7 @@ import numpy as np
 
 from bm25 import BM25
 from embedder import encode_query
+from reranker import rerank
 from retriever import load_index, rrf_merge
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -34,6 +35,7 @@ def evaluate(questions, vectors, chunks):
     bm25 = BM25(chunks)
     vector_ranks = []
     hybrid_ranks = []
+    rerank_ranks = []
 
     for item in questions:
         question = item["question"]
@@ -49,7 +51,14 @@ def evaluate(questions, vectors, chunks):
         hybrid_order = sorted(combined, key=combined.get, reverse=True)
         hybrid_ranks.append(rank_of_answer(hybrid_order, chunks, key))
 
-    return vector_ranks, hybrid_ranks
+        candidates = [
+            (float(combined[i]), chunks[i], "") for i in hybrid_order
+        ]
+        reranked = rerank(question, candidates, len(chunks))
+        rerank_order = [chunks.index(text) for _, text, _ in reranked]
+        rerank_ranks.append(rank_of_answer(rerank_order, chunks, key))
+
+    return vector_ranks, hybrid_ranks, rerank_ranks
 
 
 def summarize(name, ranks):
@@ -77,14 +86,20 @@ def main():
         questions = json.load(f)
 
     vectors, chunks, sources = load_index()
-    vector_ranks, hybrid_ranks = evaluate(questions, vectors, chunks)
+    vector_ranks, hybrid_ranks, rerank_ranks = evaluate(questions, vectors, chunks)
 
     print(f"共 {len(questions)} 个问题，索引 {len(chunks)} 块")
-    for item, v_rank, h_rank in zip(questions, vector_ranks, hybrid_ranks):
-        print(f"  向量第 {v_rank} 名 | 混合第 {h_rank} 名  ← {item['question']}")
+    for item, v_rank, h_rank, r_rank in zip(
+        questions, vector_ranks, hybrid_ranks, rerank_ranks
+    ):
+        print(
+            f"  向量第 {v_rank} 名 | 混合第 {h_rank} 名 | 重排第 {r_rank} 名"
+            f"  ← {item['question']}"
+        )
 
     summarize("纯向量检索", vector_ranks)
     summarize("混合检索", hybrid_ranks)
+    summarize("混合 + 重排序", rerank_ranks)
 
 
 if __name__ == "__main__":

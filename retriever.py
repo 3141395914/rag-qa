@@ -66,8 +66,12 @@ def rrf_merge(*rank_lists, k=60):
     return combined
 
 
-def search(question, top_k=TOP_K):
-    """混合检索：向量路 + 关键词路，按排名融合后取前几块。"""
+def search(question, top_k=TOP_K, rerank=False):
+    """检索。
+
+    rerank=False 时返回混合检索的结果；rerank=True 时先召回全部候选，
+    再用重排序模型精排出前 top_k 条。
+    """
     global _bm25
 
     vectors, chunks, sources = load_index()
@@ -82,6 +86,12 @@ def search(question, top_k=TOP_K):
     keyword_scores = np.array(_bm25.scores(question))
 
     combined = rrf_merge(vector_scores, keyword_scores)
-    order = sorted(combined, key=combined.get, reverse=True)[:top_k]
+    order = sorted(combined, key=combined.get, reverse=True)
+    candidates = [(float(combined[i]), chunks[i], sources[i]) for i in order]
 
-    return [(float(combined[i]), chunks[i], sources[i]) for i in order]
+    if rerank:
+        from reranker import rerank as do_rerank
+
+        return do_rerank(question, candidates, top_k)
+
+    return candidates[:top_k]
