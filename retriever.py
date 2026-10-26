@@ -141,6 +141,7 @@ def search(question, top_k=TOP_K, rerank=False):
     if rerank:
         from reranker import rerank as do_rerank
 
-        return do_rerank(question, candidates, top_k)
+        # 先取融合后的前 20 条再精排，避免候选过多时重排序耗时过长
+        return do_rerank(question, candidates[:20], top_k)
 
     return candidates[:top_k]
