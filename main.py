@@ -14,12 +14,14 @@ DOCS_DIR = "docs"
 
 
 def load_docs():
+    """递归读取 docs 目录下的所有文件，子目录也会被扫到。"""
     docs = []
-    for name in sorted(os.listdir(DOCS_DIR)):
-        path = os.path.join(DOCS_DIR, name)
-        if os.path.isfile(path):
+    for root, _, files in os.walk(DOCS_DIR):
+        for name in sorted(files):
+            path = os.path.join(root, name)
+            rel_path = os.path.relpath(path, DOCS_DIR)
             with open(path, encoding="utf-8") as f:
-                docs.append((name, f.read()))
+                docs.append((rel_path, f.read()))
     return docs
 
 

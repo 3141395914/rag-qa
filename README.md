@@ -100,6 +100,22 @@ python import_jobs.py D:\codexjob\web-extract-agent\cache
 python main.py index
 ```
 
+### 电商客服知识库
+
+```bash
+python crawl_jd_help.py
+```
+
+爬取京东帮助中心的公开政策文档（运费、配送、售后、发票等），
+保存到 `docs/电商客服/`，共 43 篇。只抓帮助中心的公开页面，不碰商品页，
+每篇之间停顿一秒，低频访问，用于个人学习。
+
+建索引后可以问：
+
+```bash
+python main.py ask "京东自营商品满多少钱免运费？"
+```
+
 也可以用网页界面提问：
 
 ```bash
