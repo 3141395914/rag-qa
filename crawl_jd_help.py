@@ -70,6 +70,13 @@ def main():
                 if len(text) < 100:
                     continue
 
+                # 页面底部有"是否有帮助"投票和推荐问题，从标记处截断
+                for marker in ("这条帮助是否解决了您的问题", "猜你感兴趣的问题"):
+                    cut = text.find(marker)
+                    if cut != -1:
+                        text = text[:cut].rstrip()
+                text = text.replace("下载该帮助文档", "")
+
                 lines = []
                 for line in text.splitlines():
                     cleaned = line.strip().lstrip(">").strip()
