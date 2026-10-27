@@ -87,6 +87,17 @@ python app.py
 
 启动后打开 `http://127.0.0.1:7860`，输入问题就能看到回答和引用来源。
 
+### 自写前端版本
+
+`app.py` 是用 Gradio 快速搭的。项目里还有一个自己写的前端：
+
+```bash
+python -m uvicorn web:app --port 8000
+```
+
+打开 `http://127.0.0.1:8000`。页面用原生 HTML、CSS、JavaScript 写在 `static/index.html`，
+后端是 FastAPI，`POST /ask` 接收问题，返回答案和引用来源。
+
 ## 目录结构
 
 ```
@@ -99,6 +110,8 @@ reranker.py   重排序模型，把问题和段落拼在一起判断相关度
 generator.py  拼提示词，调用 DeepSeek 生成答案
 main.py       命令行入口
 app.py        网页界面，用 Gradio 做的
+web.py        FastAPI 后端，配合 static/index.html 使用
+static/       自己写的前端页面
 crawl_jd_all.py  爬取京东帮助中心全部条款
 docs/         放要检索的文档
 index/        生成的索引，不进仓库

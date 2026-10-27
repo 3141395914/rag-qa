@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>电商客服知识库</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #f5f6f8;
+      color: #1f2329;
+      font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      display: flex;
+      justify-content: center;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 760px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      box-shadow: 0 0 24px rgba(0, 0, 0, 0.06);
+    }
+
+    header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid #eceef1;
+    }
+
+    h1 {
+      margin: 0 0 4px;
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .sub {
+      margin: 0;
+      font-size: 13px;
+      color: #7a8088;
+    }
+
+    .chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .empty {
+      margin: auto;
+      text-align: center;
+      color: #9aa0a6;
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
+    .msg {
+      max-width: 86%;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .msg.user {
+      align-self: flex-end;
+      background: #1f7a4d;
+      color: #fff;
+      border-bottom-right-radius: 3px;
+    }
+
+    .msg.bot {
+      align-self: flex-start;
+      background: #f2f4f6;
+      border-bottom-left-radius: 3px;
+    }
+
+    .msg.error {
+      align-self: flex-start;
+      background: #fdf0ef;
+      color: #b3261e;
+    }
+
+    .loading {
+      color: #7a8088;
+      font-size: 13px;
+      padding-left: 4px;
+    }
+
+    .sources {
+      margin-top: 10px;
+      border-top: 1px dashed #d8dce1;
+      padding-top: 8px;
+    }
+
+    .sources summary {
+      cursor: pointer;
+      font-size: 12px;
+      color: #7a8088;
+      user-select: none;
+    }
+
+    .source-item {
+      margin: 8px 0 0;
+      padding: 8px 10px;
+      background: #fff;
+      border: 1px solid #e6e8eb;
+      border-radius: 6px;
+      font-size: 12px;
+      color: #5c636b;
+      line-height: 1.6;
+    }
+
+    .source-item strong {
+      color: #1f2329;
+    }
+
+    footer {
+      padding: 14px 24px 18px;
+      border-top: 1px solid #eceef1;
+      display: flex;
+      gap: 10px;
+    }
+
+    input {
+      flex: 1;
+      height: 44px;
+      padding: 0 14px;
+      border: 1px solid #d8dce1;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #1f7a4d;
+      box-shadow: 0 0 0 3px rgba(31, 122, 77, 0.12);
+    }
+
+    button {
+      height: 44px;
+      padding: 0 22px;
+      border: none;
+      border-radius: 8px;
+      background: #1f7a4d;
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: default;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>电商客服知识库</h1>
+      <p class="sub">基于京东帮助中心 851 篇公开条款，回答会标注引用来源</p>
+    </header>
+
+    <div class="chat" id="chat">
+      <div class="empty" id="empty">
+        问点什么试试<br>
+        比如：京东自营商品满多少钱免运费？
+      </div>
+    </div>
+
+    <footer>
+      <input id="question" placeholder="输入问题，回车发送" autocomplete="off">
+      <button id="send">发送</button>
+    </footer>
+  </div>
+
+  <script>
+    const chat = document.getElementById("chat");
+    const empty = document.getElementById("empty");
+    const input = document.getElementById("question");
+    const send = document.getElementById("send");
+
+    function appendMessage(text, kind) {
+      const div = document.createElement("div");
+      div.className = `msg ${kind}`;
+      div.textContent = text;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+      return div;
+    }
+
+    function appendSources(parent, sources) {
+      if (!sources || sources.length === 0) return;
+
+      const details = document.createElement("details");
+      details.className = "sources";
+
+      const summary = document.createElement("summary");
+      summary.textContent = `引用来源（${sources.length} 条）`;
+      details.appendChild(summary);
+
+      for (const item of sources) {
+        const box = document.createElement("div");
+        box.className = "source-item";
+
+        const title = document.createElement("strong");
+        title.textContent = item.source;
+        box.appendChild(title);
+
+        const score = document.createElement("span");
+        score.textContent = `  相关度 ${item.score}`;
+        box.appendChild(score);
+
+        const body = document.createElement("div");
+        body.textContent = item.text;
+        box.appendChild(body);
+
+        details.appendChild(box);
+      }
+
+      parent.appendChild(details);
+    }
+
+    async function ask() {
+      const question = input.value.trim();
+      if (!question || send.disabled) return;
+
+      empty.style.display = "none";
+      appendMessage(question, "user");
+      input.value = "";
+
+      send.disabled = true;
+      const loading = document.createElement("div");
+      loading.className = "loading";
+      loading.textContent = "正在检索和生成…";
+      chat.appendChild(loading);
+      chat.scrollTop = chat.scrollHeight;
+
+      try {
+        const resp = await fetch("/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question })
+        });
+
+        if (!resp.ok) throw new Error(`请求失败（${resp.status}）`);
+
+        const data = await resp.json();
+        loading.remove();
+
+        const bubble = appendMessage(data.answer, "bot");
+        appendSources(bubble, data.sources);
+      } catch (err) {
+        loading.remove();
+        appendMessage(`出错了：${err.message}`, "error");
+      } finally {
+        send.disabled = false;
+        input.focus();
+        chat.scrollTop = chat.scrollHeight;
+      }
+    }
+
+    send.addEventListener("click", ask);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") ask();
+    });
+  </script>
+</body>
+</html>
